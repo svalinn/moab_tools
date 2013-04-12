@@ -13,7 +13,67 @@
 #include "MBSkinner.hpp"
 #include "DagMC.hpp"
 
+#define DAG DagMC::instance()
+using moab::DagMC;
+
 namespace gen {
+  
+  void moab_printer(MBErrorCode error_code)
+  {
+    if ( error_code == MB_INDEX_OUT_OF_RANGE )
+    {	
+	std::cerr << "ERROR: MB_INDEX_OUT_OF_RANGE" << std::endl;
+      }
+    if ( error_code == MB_MEMORY_ALLOCATION_FAILED )
+      {
+	std::cerr << "ERROR: MB_MEMORY_ALLOCATION_FAILED" << std::endl;	
+      }
+      if ( error_code == MB_ENTITY_NOT_FOUND )
+      {
+	std::cerr << "ERROR: MB_ENTITY_NOT_FOUND" << std::endl;
+      }
+    if ( error_code == MB_MULTIPLE_ENTITIES_FOUND )
+      {
+	std::cerr << "ERROR: MB_MULTIPLE_ENTITIES_FOUND" << std::endl;
+      }
+    if ( error_code == MB_TAG_NOT_FOUND )
+      {
+	std::cerr << "ERROR: MB_TAG_NOT_FOUND" << std::endl;
+      }
+    if ( error_code == MB_FILE_DOES_NOT_EXIST )
+      {
+	std::cerr << "ERROR: MB_FILE_DOES_NOT_EXIST" << std::endl;
+      }    
+    if ( error_code == MB_FILE_WRITE_ERROR )
+      {
+	std::cerr << "ERROR: MB_FILE_WRITE_ERROR" << std::endl;
+      }    
+    if ( error_code == MB_ALREADY_ALLOCATED )
+      {
+	std::cerr << "ERROR: MB_ALREADY_ALLOCATED" << std::endl;
+      }    
+    if ( error_code == MB_VARIABLE_DATA_LENGTH )
+      {
+	std::cerr << "ERROR: MB_VARIABLE_DATA_LENGTH" << std::endl;
+      }  
+    if ( error_code == MB_INVALID_SIZE )
+      {
+	std::cerr << "ERROR: MB_INVALID_SIZE" << std::endl;
+      }  
+    if ( error_code == MB_UNSUPPORTED_OPERATION )
+      {
+	std::cerr << "ERROR: MB_UNSUPPORTED_OPERATION" << std::endl;
+      }  
+    if ( error_code == MB_UNHANDLED_OPTION )
+      {
+	std::cerr << "ERROR: MB_UNHANDLED_OPTION" << std::endl;
+      }  
+    if ( error_code == MB_FAILURE )
+      {
+	std::cerr << "ERROR: MB_FAILURE" << std::endl;
+      }  
+    return;
+  }
 
   bool error( const bool error_has_occured, const std::string message ) {
     if(error_has_occured) {
@@ -1516,22 +1576,49 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
   if (MB_SUCCESS != rval) return rval;
   std::cout << "in measure_volume 1" << std::endl;
 
-    // get surface senses
+  // get surface senses
   std::vector<int> senses( surfaces.size() );
-  moab::DagMC &dagmc = *moab::DagMC::instance( MBI() );
-
+  
+  //moab::DagMC &dagmc = *moab::DagMC::instance( MBI() ); //setup dag instance
+  DAG -> instance(MBI());
+  //DAG -> instance(DAG->moab_instance());
+  rval = DAG -> load_existing_contents();
+  if (MB_SUCCESS != rval) 
+    gen::moab_printer(rval);
+  std::cout << "loaded existing contents" << std::endl;
+  
+  rval = DAG -> init_OBBTree();
+  
+  
+    /*
   std::cout << surfaces.size() << std::endl;
   std::cout << volume << std::endl;
-
-  rval = dagmc.surface_sense( volume, surfaces.size(), &surfaces[0], &senses[0] );
-
+  std::cout << volume << " " << surfaces.size() << std::endl;
+  */
+    
+  rval = DAG -> surface_sense( volume, surfaces.size(), &surfaces[0], &senses[0] );
+  if (MB_SUCCESS != rval) 
+    gen::moab_printer(rval);
+  
+  MBEntityHandle surface;
+  int sense;
+  rval = DAG -> surface_sense( volume, surface, sense);
+  if (MB_SUCCESS != rval) 
+    gen::moab_printer(rval);
+  rval = DAG -> measure_volume( volume, result );
+  if (MB_SUCCESS != rval) 
+    gen::moab_printer(rval);
+  
+     
+  std::cout << "rval = " << rval << " result = " << result << std::endl;
   std::cout << "in measure_volume 2" << std::endl;
 
-  if (MB_SUCCESS != rval) {
-    std::cerr << "ERROR: Surface-Volume relative sense not available. "
-              << "Cannot calculate volume." << std::endl;
-    return rval;
-  }
+  if (MB_SUCCESS != rval) 
+    {
+      std::cerr << "ERROR: Surface-Volume relative sense not available. "
+		<< "Cannot calculate volume." << std::endl;
+      return rval;
+    }
 
   std::cout << "in measure_volume 2" << std::endl;
 
