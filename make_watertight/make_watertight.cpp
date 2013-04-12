@@ -43,62 +43,6 @@
 
 MBInterface *MBI();
 
-void moab_printer(MBErrorCode error_code)
-{
-  if ( error_code == MB_INDEX_OUT_OF_RANGE )
-    {
-      std::cerr << "ERROR: MB_INDEX_OUT_OF_RANGE" << std::endl;
-    }
-  if ( error_code == MB_MEMORY_ALLOCATION_FAILED )
-    {
-      std::cerr << "ERROR: MB_MEMORY_ALLOCATION_FAILED" << std::endl;
-    }
-  if ( error_code == MB_ENTITY_NOT_FOUND )
-    {
-      std::cerr << "ERROR: MB_ENTITY_NOT_FOUND" << std::endl;
-    }
-  if ( error_code == MB_MULTIPLE_ENTITIES_FOUND )
-    {
-      std::cerr << "ERROR: MB_MULTIPLE_ENTITIES_FOUND" << std::endl;
-    }
-  if ( error_code == MB_TAG_NOT_FOUND )
-    {
-      std::cerr << "ERROR: MB_TAG_NOT_FOUND" << std::endl;
-    }
-  if ( error_code == MB_FILE_DOES_NOT_EXIST )
-    {
-      std::cerr << "ERROR: MB_FILE_DOES_NOT_EXIST" << std::endl;
-    }    
-  if ( error_code == MB_FILE_WRITE_ERROR )
-    {
-      std::cerr << "ERROR: MB_FILE_WRITE_ERROR" << std::endl;
-    }    
-  if ( error_code == MB_ALREADY_ALLOCATED )
-    {
-      std::cerr << "ERROR: MB_ALREADY_ALLOCATED" << std::endl;
-    }    
-  if ( error_code == MB_VARIABLE_DATA_LENGTH )
-    {
-      std::cerr << "ERROR: MB_VARIABLE_DATA_LENGTH" << std::endl;
-    }  
-  if ( error_code == MB_INVALID_SIZE )
-    {
-      std::cerr << "ERROR: MB_INVALID_SIZE" << std::endl;
-    }  
-  if ( error_code == MB_UNSUPPORTED_OPERATION )
-    {
-      std::cerr << "ERROR: MB_UNSUPPORTED_OPERATION" << std::endl;
-    }  
-  if ( error_code == MB_UNHANDLED_OPTION )
-    {
-      std::cerr << "ERROR: MB_UNHANDLED_OPTION" << std::endl;
-    }  
-  if ( error_code == MB_FAILURE )
-    {
-      std::cerr << "ERROR: MB_FAILURE" << std::endl;
-    }  
-  return;
-}
 
 MBErrorCode delete_all_edges() {
   // delete all of the edges. Never keep edges. They are too hard to track and use
@@ -1526,7 +1470,8 @@ MBErrorCode fix_normals(MBRange surface_sets, MBTag id_tag, MBTag normal_tag, co
     return MB_SUCCESS;
   }
 
-MBErrorCode get_geom_size_before_sealing( const MBRange geom_sets[], 
+MBErrorCode get_geom_size_before_sealing( 
+					  const MBRange geom_sets[], 
                                           const MBTag geom_tag,
                                           const MBTag size_tag ) 
 {
@@ -1724,6 +1669,8 @@ int main(int argc, char **argv)
     MBErrorCode result, rval;
     MBEntityHandle input_set;
 
+   // MBInterface *MBI = &moab;
+    
     rval = MBI()->create_meshset( MESHSET_SET, input_set );
 
     if(gen::error(MB_SUCCESS!=rval,"failed to create_meshset"))
@@ -1798,61 +1745,44 @@ int main(int argc, char **argv)
     result = MBI()->tag_get_handle( GEOM_DIMENSION_TAG_NAME, 1,
 				MB_TYPE_INTEGER, geom_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT );
     assert( MB_SUCCESS == result );
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      }
+    if(gen::error(MB_SUCCESS!=result,"Could not create geom_tag tag")) return result;
+
     result = MBI()->tag_get_handle( GLOBAL_ID_TAG_NAME, 1,
 				MB_TYPE_INTEGER, id_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT);
     assert( MB_SUCCESS == result );
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      }
+    if(gen::error(MB_SUCCESS!=result,"Could not create id_tag tag")) return result;
+    
     result = MBI()->tag_get_handle( "NORMAL", sizeof(MBCartVect), MB_TYPE_OPAQUE,
         normal_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT);
     assert( MB_SUCCESS == result );
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      }
+    if(gen::error(MB_SUCCESS!=result,"Could not create normal_tag tag")) return result;
+    
     result = MBI()->tag_get_handle( "MERGE", 1, MB_TYPE_HANDLE,
         merge_tag, moab::MB_TAG_SPARSE|moab::MB_TAG_CREAT );
     assert( MB_SUCCESS == result ); 
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      } 
+    if(gen::error(MB_SUCCESS!=result,"Could not create merge_tag tag")) return result;
+    
     result = MBI()->tag_get_handle( "FACETING_TOL", 1, MB_TYPE_DOUBLE,
         faceting_tol_tag , moab::MB_TAG_SPARSE|moab::MB_TAG_CREAT );
     assert( MB_SUCCESS == result );  
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      }
+    if(gen::error(MB_SUCCESS!=result,"Could not create faceting_tol_tag tag")) return result;
+    
     result = MBI()->tag_get_handle( "GEOMETRY_RESABS", 1,     MB_TYPE_DOUBLE,
                              geometry_resabs_tag, moab::MB_TAG_SPARSE|moab::MB_TAG_CREAT  );
     assert( MB_SUCCESS == result );  
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      }
+    if(gen::error(MB_SUCCESS!=result,"Could not create geometry_resabs_tag tag")) return result;
+    
     result = MBI()->tag_get_handle( "GEOM_SIZE", 1, MB_TYPE_DOUBLE,
 				    size_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT  );
     assert( (MB_SUCCESS == result) );
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      }
+    if(gen::error(MB_SUCCESS!=result,"Could not create size_tag tag")) return result;
+    
     int true_int = 1;    
     result = MBI()->tag_get_handle( "ORIG_CURVE", 1,
 				MB_TYPE_INTEGER, orig_curve_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT, &true_int );
     assert( MB_SUCCESS == result );
-    if ( result != MB_SUCCESS )
-      {
-	moab_printer(result);
-      }
-    // PROBLEM: MOAB is not consistent with file_set behavior. The tag may not be
+    if(gen::error(MB_SUCCESS!=result,"Could not create orig_curve_tag tag")) return result;
+        // PROBLEM: MOAB is not consistent with file_set behavior. The tag may not be
     // on the file_set.
     MBRange file_set;
     result = MBI()->get_entities_by_type_and_tag( 0, MBENTITYSET, &faceting_tol_tag,
@@ -1933,18 +1863,18 @@ int main(int argc, char **argv)
 
     // this could be related to when there are sat files rather than mesh?
     // If desired, find each entity's size before sealing.
-    /*
+    
     if(check_geom_size) 
       {
 	std::cout << "I am checking the geometry size" << std::endl;
-	result = get_geom_size_before_sealing( geom_sets, geom_tag, size_tag );
+	result = get_geom_size_before_sealing(geom_sets, geom_tag, size_tag );
 	if(gen::error(MB_SUCCESS!=result,"measuring geom size failed"))
 	  {
 	    return result;
 	  }
       }
     
-    */
+    
 
     std::cout << "Get entity count before sealing" << std::endl;
     // Get entity count before sealing.
@@ -1971,7 +1901,6 @@ int main(int argc, char **argv)
                               orig_curve_tag,SME_RESABS_TOL, FACET_TOL, debug);
 
     assert( MB_SUCCESS == result );
-    moab_printer(result);
     if ( result != MB_SUCCESS ) 
       {
 	std::cout << "I have failed to zip" << std::endl;
