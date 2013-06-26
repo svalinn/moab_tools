@@ -1,3 +1,3 @@
 #!/bin/bash
 
-g++ retag_hdf5.cpp -I/opt/dagmc/moab/include -I/opt/dagmc/moab//include/core -L/opt/dagmc/moab/lib -lMOAB -o retag_hdf5
+g++ -g retag_hdf5.cpp -I/opt/dagmc/moab/include -I/opt/dagmc/moab//include/core -L/opt/dagmc/moab/lib -lMOAB -o retag_hdf5
