@@ -6,6 +6,7 @@
 #include <math.h>
 #include <time.h>
 #include <vector>
+#include <stdio.h>
 
 #include "MBInterface.hpp"
 #include "MBCore.hpp"
@@ -66,12 +67,118 @@ int main(int argc, char **argv)
     }
 
 
+  MBTag category_tag;
+  rval = MBI()->tag_get_handle( CATEGORY_TAG_NAME, 32, MB_TYPE_OPAQUE, category_tag );
+  if(rval!=MB_SUCCESS)
+    {
+      std::cout << "Fail 1" << std::endl;
+      exit(1);
+    }
+  char group_category[CATEGORY_TAG_SIZE];
+  std::fill(group_category, group_category+CATEGORY_TAG_SIZE, '\0');
+  sprintf(group_category, "%s", "Group");
+  printf(group_category,"%s");
+  const void* const group_val[] = {&group_category};
+  MBRange groups;
+  rval = MBI()->get_entities_by_type_and_tag(0, MBENTITYSET, &category_tag, 
+                                           group_val, 1, groups);
+  if(rval!=MB_SUCCESS)
+    {
+      std::cout << "Fail 2" << std::endl;
+      exit(1);
+    }
+
+  int nmat = 1;
+
+  MBTag name_tag;
+  rval = MBI()->tag_get_handle( NAME_TAG_NAME, NAME_TAG_SIZE, MB_TYPE_OPAQUE, name_tag );
+  for( MBRange::iterator i = groups.begin(); i != groups.end(); ++i )
+    {
+      MBEntityHandle grp = *i;
+      const void* p;
+      int ignored;
+      rval = MBI()->tag_get_by_ptr( name_tag, &grp, 1, &p, &ignored );
+      if( MB_SUCCESS != rval ) return rval;
+      const char* grpname = static_cast<const char*>(p);
+      std::string modname(grpname);
+      std::cout << modname << std::endl;
+
+      std::string new_name;
+
+      if (std::string::npos != modname.find("mat_"))
+	{
+	  new_name = "M_M"+std::to_string(nmat); 
+	  nmat++;
+	}
+      else
+	{
+	  new_name = "M_VACUUM";
+	}
+
+      p = static_cast<const void*>(new_name.c_str());
+      int length = NAME_TAG_SIZE;
+      rval = MBI()->tag_set_by_ptr( name_tag, &grp, 1, &p, &length);
+    }
+
+  std::string out_file = "ouput.h5m";
+  rval = MBI()->write_mesh(out_file.c_str(),&input_mesh_set,0);
+
+  exit(1);
+
+  // now have list of tags in the problem
+  MBRange facets;
+  rval = MBI()->get_entities_by_dimension(input_mesh_set, 2, facets);
+
+  rval = MBI()->tag_get_handle(NAME_TAG_NAME, NAME_TAG_SIZE, MB_TYPE_OPAQUE, name_tag );
+
+
+  //  rval = MBI()->tag_get_handle("NAME",32,MB_TYPE_OPAQUE,name_tag);
+
+  std::vector<std::string> values;
+  for(MBRange::iterator af_it = facets.begin() ; af_it != facets.end() ; ++af_it)
+    {
+      std::string tmp;
+      rval = MBI()->tag_get_data(name_tag,&(*af_it),32,&tmp);
+      values.push_back(tmp);
+    }
+
+  std::vector<std::string>::const_iterator values_it;
+  for( values_it = values.begin() ; values_it != values.end() ; ++values_it )
+    {
+	std::cout << *values_it << std::endl;
+    }
+
+
+  exit(0);
+
+
+
+
+
+  // loop over the mat_set
+  MBTag mat_set_tag;
+  rval = MBI()->tag_get_handle("MATERIAL_SET",1,MB_TYPE_INTEGER,mat_set_tag);
+  std::vector<int> value;
+  for(MBRange::iterator f_it = facets.begin() ; f_it != facets.end() ; ++f_it)
+    {
+      int tmp;
+      rval = MBI()->tag_get_data(mat_set_tag,&(*f_it),1,&tmp);
+      value.push_back(tmp);
+    }
+
+  int lval = 0;
+  std::vector<int>::const_iterator tgs;
+  for( tgs = value.begin() ; tgs != value.end() ; ++tgs )
+    {
+	std::cout << *tgs << std::endl;
+    }
+
+  exit(0);
+  
   MBRange dagmc_mat;
   MBTag dagmc_tag;
   std::vector<std::string> dagmc_matnum;
 
-  //  rval = MBI()->tag_get_handle("DAGMC_TAG_NAME",1,MB_TYPE_INTEGER,
-  //			       dagmc_tag,moab::MB_TAG_DENSE);
   rval = MBI()->tag_get_handle("NAME",0,MB_TYPE_OPAQUE,
   			       dagmc_tag,moab::MB_TAG_DENSE);
   if(rval!=MB_SUCCESS)
