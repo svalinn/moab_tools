@@ -18,9 +18,6 @@
 // make CXXFLAGS=-g for debug
 // make CXXFLAGS=-pg for profiling
 
-// modified by Andrew Davis 2012
-// Updated deprecated MOAB calls
-
 #include <iostream>
 #include <sstream>
 #include <iomanip> // for setprecision
@@ -41,8 +38,8 @@
 #include "zip.hpp"
 #include "cleanup.hpp"
 
-MBInterface *MBI();
 
+MBInterface *MBI();
 
 MBErrorCode delete_all_edges() {
   // delete all of the edges. Never keep edges. They are too hard to track and use
@@ -73,7 +70,7 @@ MBErrorCode find_degenerate_tris() {
       ++counter;
     }
   }
-  std::cout << "find_degenerate_tris: " << counter << " tris found." << std::endl;
+ std::cout << "find_degenerate_tris: " << counter << " tris found." << std::endl;
   return MB_SUCCESS;
 }
 
@@ -967,44 +964,31 @@ MBErrorCode prepare_surfaces(MBRange &surface_sets,
                              MBTag geom_tag, MBTag id_tag, MBTag normal_tag, MBTag merge_tag,
                              MBTag orig_curve_tag,
                              const double SME_RESABS_TOL, const double FACET_TOL, 
-                               const bool debug) 
-{
-   
+                               const bool debug) {
+    
     MBErrorCode result;
 
     // loop over each surface meshset
-    for(MBRange::iterator i=surface_sets.begin(); i!=surface_sets.end(); i++ ) 
-      {
+    for(MBRange::iterator i=surface_sets.begin(); i!=surface_sets.end(); i++ ) {
 
-	// get the surf id of the surface meshset
-	int surf_id;
-	result = MBI()->tag_get_data( id_tag, &(*i), 1, &surf_id );
+      // get the surf id of the surface meshset
+      int surf_id;
+      result = MBI()->tag_get_data( id_tag, &(*i), 1, &surf_id );
+      if(gen::error(MB_SUCCESS!=result,"could not get id tag")) return result;
+      assert(MB_SUCCESS == result);
+      if(debug) std::cout << "  surf id=" << surf_id << std::endl;
 
-	if(gen::error(MB_SUCCESS!=result,"could not get id tag"))
-	  {
-	    return result;
-	  }
+      // get the 2D entities in the surface set
+      MBRange dim2_ents;
+      result = MBI()->get_entities_by_dimension( *i, 2, dim2_ents );
+      if(gen::error(MB_SUCCESS!=result,"could not get 3D entities")) return result;
+      assert(MB_SUCCESS == result);
 
-	assert(MB_SUCCESS == result);
-
-	if(debug) std::cout << "  surf id= " << surf_id << std::endl;
-
-	// get the 2D entities in the surface set
-	MBRange dim2_ents;
-	result = MBI()->get_entities_by_dimension( *i, 2, dim2_ents );
-	if(gen::error(MB_SUCCESS!=result,"could not get 3D entities")) 
-	  {
-	    return result;
-	  }
-	assert(MB_SUCCESS == result);
-
-	// get facets of the surface meshset
-	MBRange tris;
-	result = MBI()->get_entities_by_type( *i, MBTRI, tris );
-
-	if(gen::error(MB_SUCCESS!=result,"could not get tris")) return result;
-
-	assert(MB_SUCCESS == result);
+      // get facets of the surface meshset
+      MBRange tris;
+      result = MBI()->get_entities_by_type( *i, MBTRI, tris );
+      if(gen::error(MB_SUCCESS!=result,"could not get tris")) return result;
+      assert(MB_SUCCESS == result);
 
       // Remove and 2D entities that are not triangles. This is needed because
       // ReadCGM will add quads and polygons to the surface set. This code only
@@ -1470,36 +1454,30 @@ MBErrorCode fix_normals(MBRange surface_sets, MBTag id_tag, MBTag normal_tag, co
     return MB_SUCCESS;
   }
 
-MBErrorCode get_geom_size_before_sealing( 
-					  const MBRange geom_sets[], 
+MBErrorCode get_geom_size_before_sealing( const MBRange geom_sets[], 
                                           const MBTag geom_tag,
-                                          const MBTag size_tag ) 
-{
+                                          const MBTag size_tag ) {
   MBErrorCode rval;
-  for( int dim = 1 ; dim < 4 ; ++dim ) 
-    {
-    for(MBRange::iterator i=geom_sets[dim].begin() ; i != geom_sets[dim].end() ; i++) 
-      {
-	double size;
-	std::cout << "dim = " << dim << " *i =" << *i << std::endl;
-	rval = gen::measure( *i, geom_tag, size );
-	std::cout << " here in gen mesaure" << std::endl;
-	if(gen::error(MB_SUCCESS!=rval,"could not measure")) 
-	  {
-	    return rval;
-	  }
+  for(int dim=1; dim <= 3 ; dim++) {
+    std::cout << "dim = " << dim << std::endl;
+    for(MBRange::iterator i=geom_sets[dim].begin(); i!=geom_sets[dim].end(); i++) {
+      double size = 0;
+	std::cout << "*i =" << *i << std::endl;
+	std::cout << "geom_tag =" << geom_tag << std::endl;
+	std::cout << "size =" << size << std::endl;
 
-	std::cout <<  " *i = " << *i << " size = " << size << std::endl;
 
-	rval = MBI()->tag_set_data( size_tag, &(*i), 1, &size );
-	std::cout << " here in set tag data" << std::endl;
-	if(gen::error(MB_SUCCESS!=rval,"could not set size tag")) 
-	  {
-	    return rval;
-	  }
-      }
+      rval = gen::measure( *i, geom_tag, size );
+      if(gen::error(MB_SUCCESS!=rval,"could not measure")) return rval;
+      rval = MBI()->tag_set_data( size_tag, &(*i), 1, &size );
+      if(gen::error(MB_SUCCESS!=rval,"could not set size tag")) return rval;
+
+	std::cout << "*i =" << *i << std::endl;
+	std::cout << "geom_tag =" << geom_tag << std::endl;
+	std::cout << "size =" << size << std::endl;
+
     }
-  std::cout << "finished in get_geom_size_before_sealing" << std::endl;
+  }
   return MB_SUCCESS;
 }
 
@@ -1635,8 +1613,7 @@ MBErrorCode get_geom_size_after_sealing( const MBRange geom_sets[],
       return MB_SUCCESS;
 }
 
-int main(int argc, char **argv) 
-  {
+  int main(int argc, char **argv) {
 
     // ******************************************************************
     // Load the h5m file and create tags.
@@ -1647,16 +1624,15 @@ int main(int argc, char **argv)
     const bool check_geom_size = true;
 
     // check input args
-    if( 2 > argc || 3 < argc ) 
-      {
-	std::cout << "To zip a faceted h5m file:" << std::endl;
-	std::cout << "$ ./make_watertight <input_file.h5m>" << std::endl;
-	std::cout << "To facet and zip an ACIS file using the default facet tolerance:" << std::endl;
-	std::cout << "$ ./make_watertight <input_file.sat>" << std::endl;
-	std::cout << "To facet and zip an ACIS file using a specified facet tolerance:" << std::endl;
-	std::cout << "$ ./make_watertight <input_file.sat> <facet_tolerance>" << std::endl;
-	return MB_FAILURE;
-      }
+    if(2>argc || 3<argc) {
+      std::cout << "To zip a faceted h5m file:" << std::endl;
+      std::cout << "$ ./make_watertight <input_file.h5m>" << std::endl;
+      std::cout << "To facet and zip an ACIS file using the default facet tolerance:" << std::endl;
+      std::cout << "$ ./make_watertight <input_file.sat>" << std::endl;
+      std::cout << "To facet and zip an ACIS file using a specified facet tolerance:" << std::endl;
+      std::cout << "$ ./make_watertight <input_file.sat> <facet_tolerance>" << std::endl;
+      return MB_FAILURE;
+    }
 
     // The root name does not have an extension
     std::string input_name = argv[1];
@@ -1668,138 +1644,94 @@ int main(int argc, char **argv)
     // load the input file
     MBErrorCode result, rval;
     MBEntityHandle input_set;
-
-   // MBInterface *MBI = &moab;
-    
     rval = MBI()->create_meshset( MESHSET_SET, input_set );
-
-    if(gen::error(MB_SUCCESS!=rval,"failed to create_meshset"))
-      {
-	return rval;
-      }
-
+    if(gen::error(MB_SUCCESS!=rval,"failed to create_meshset")) return rval;
     std::cout << "Loading input file..." << std::endl;
 
     // If reading an h5m file, the facet tolerance has already been determined.
     // Read the facet_tol from the file_set. There should only be one input
     // argument.
-
     if(std::string::npos!=input_name.find("h5m") && (2==argc)) 
-      {
-	rval = MBI()->load_file( input_name.c_str(), &input_set );
-	if(gen::error(MB_SUCCESS!=rval,"failed to load_file 0")) 
-	  {
-	    return rval;      
-	  }
-	
-	is_acis = false;
-
+	{
+     	 	rval = MBI()->load_file( input_name.c_str(), &input_set );
+		if(gen::error(MB_SUCCESS!=rval,"failed to load_file 0")) return rval;      
+     	      	is_acis = false;
     // If reading a sat file, the facet toleance will default to 1e-3 if it is
     // not specified. If the user does not specify a facet_tol, default to 1e-3.
     // This is the same as what ReadCGM uses.
-      } 
-
-    /*
-     // recreate to only perform these operations on h5m meshes  
-    else if(std::string::npos!=input_name.find("sat") && 
+	} 
+	else if(std::string::npos!=input_name.find("sat") && 
 	      ((2==argc) || (3==argc)) ) 
-      {
-	double facet_tol;
-	if(3 == argc) 
-	  {
-	    facet_tol = atof(argv[2]);
-	  }
+	{
+     	 	double facet_tol;
+		      	if(3 == argc) 
+			{
+			        facet_tol = atof(argv[2]);
+      			} 
+			else 
+			{
+		        	facet_tol = 1e-3;
+		        }
+
+	      std::string options;
+	      options += "FACET_DISTANCE_TOLERANCE=";
+	      std::stringstream facet_tol_ss;
+	      facet_tol_ss << facet_tol; 
+	      options += facet_tol_ss.str();
+	      if(debug) std::cout << "  options=" << options << std::endl;
+	      rval = MBI()->load_file( input_name.c_str(), &input_set, options.c_str() );
+	      if(gen::error(MB_SUCCESS!=rval,"failed to load_file 1")) return rval;      
+
+	      // write an HDF5 file of facets with known tolerance   
+	      std::string facet_tol_filename = root_name + "_" + facet_tol_ss.str() + ".h5m";
+	      rval = MBI()->write_mesh( facet_tol_filename.c_str() );
+	      if(gen::error(MB_SUCCESS!=rval,"failed to write_mesh 0")) return rval;      
+	      is_acis = true;
+	} 
 	else 
-	  {
-	    facet_tol = 1e-3;
-	  }
-
-	std::string options;
-	options += "FACET_DISTANCE_TOLERANCE=";
-	std::stringstream facet_tol_ss;
-	facet_tol_ss << facet_tol; 
-	options += facet_tol_ss.str();
-	if(debug) std::cout << "  options=" << options << std::endl;
-	rval = MBI()->load_file( input_name.c_str(), &input_set, options.c_str() );
-	if(gen::error(MB_SUCCESS!=rval,"failed to load_file 1")) return rval;      
-
-      // write an HDF5 file of facets with known tolerance   
-	std::string facet_tol_filename = root_name + "_" + facet_tol_ss.str() + ".h5m";
-	rval = MBI()->write_mesh( facet_tol_filename.c_str() );
-	if(gen::error(MB_SUCCESS!=rval,"failed to write_mesh 0")) return rval;      
-	is_acis = true;
-      } 
-    else 
-      {
-	std::cout << "incorrect input arguments" << std::endl;
-	return MB_FAILURE;
-      }
-     //not required if  only doing this with h5m files
-     */
+	{
+	      	std::cout << "incorrect input arguments" << std::endl;
+	        return MB_FAILURE;
+    	}
 
     // create tags
     clock_t load_time = clock();    
     MBTag geom_tag, id_tag, normal_tag, merge_tag, faceting_tol_tag, 
       geometry_resabs_tag, size_tag, orig_curve_tag;
-  
-    result = MBI()->tag_get_handle( GEOM_DIMENSION_TAG_NAME, 1,
-				MB_TYPE_INTEGER, geom_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT );
+    result = MBI()->tag_create( GEOM_DIMENSION_TAG_NAME, sizeof(int), MB_TAG_DENSE,
+				MB_TYPE_INTEGER, geom_tag, 0, true );
     assert( MB_SUCCESS == result );
-    if(gen::error(MB_SUCCESS!=result,"Could not create geom_tag tag")) return result;
-
-    result = MBI()->tag_get_handle( GLOBAL_ID_TAG_NAME, 1,
-				MB_TYPE_INTEGER, id_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT);
+    result = MBI()->tag_create( GLOBAL_ID_TAG_NAME, sizeof(int), MB_TAG_DENSE,
+				MB_TYPE_INTEGER, id_tag, 0, true );
     assert( MB_SUCCESS == result );
-    if(gen::error(MB_SUCCESS!=result,"Could not create id_tag tag")) return result;
-    
-    result = MBI()->tag_get_handle( "NORMAL", sizeof(MBCartVect), MB_TYPE_OPAQUE,
-        normal_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT);
+    result = MBI()->tag_create( "NORMAL", sizeof(MBCartVect), MB_TAG_DENSE,
+                                MB_TYPE_OPAQUE, normal_tag, 0, true );
     assert( MB_SUCCESS == result );
-    if(gen::error(MB_SUCCESS!=result,"Could not create normal_tag tag")) return result;
-    
-    result = MBI()->tag_get_handle( "MERGE", 1, MB_TYPE_HANDLE,
-        merge_tag, moab::MB_TAG_SPARSE|moab::MB_TAG_CREAT );
-    assert( MB_SUCCESS == result ); 
-    if(gen::error(MB_SUCCESS!=result,"Could not create merge_tag tag")) return result;
-    
-    result = MBI()->tag_get_handle( "FACETING_TOL", 1, MB_TYPE_DOUBLE,
-        faceting_tol_tag , moab::MB_TAG_SPARSE|moab::MB_TAG_CREAT );
+    result = MBI()->tag_create( "MERGE", sizeof(MBEntityHandle), MB_TAG_SPARSE,
+                                MB_TYPE_HANDLE, merge_tag, 0, true );
     assert( MB_SUCCESS == result );  
-    if(gen::error(MB_SUCCESS!=result,"Could not create faceting_tol_tag tag")) return result;
-    
-    result = MBI()->tag_get_handle( "GEOMETRY_RESABS", 1,     MB_TYPE_DOUBLE,
-                             geometry_resabs_tag, moab::MB_TAG_SPARSE|moab::MB_TAG_CREAT  );
+    result = MBI()->tag_create( "FACETING_TOL", sizeof(double), MB_TAG_SPARSE,
+                                MB_TYPE_DOUBLE, faceting_tol_tag, 0, true );
     assert( MB_SUCCESS == result );  
-    if(gen::error(MB_SUCCESS!=result,"Could not create geometry_resabs_tag tag")) return result;
-    
-    result = MBI()->tag_get_handle( "GEOM_SIZE", 1, MB_TYPE_DOUBLE,
-				    size_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT  );
-    assert( (MB_SUCCESS == result) );
-    if(gen::error(MB_SUCCESS!=result,"Could not create size_tag tag")) return result;
-    
+    result = MBI()->tag_create( "GEOMETRY_RESABS", sizeof(double), MB_TAG_SPARSE,
+                                MB_TYPE_DOUBLE, geometry_resabs_tag, 0, true );
+    assert( MB_SUCCESS == result );  
+    result = MBI()->tag_create( "GEOM_SIZE", sizeof(double), MB_TAG_DENSE,
+				MB_TYPE_DOUBLE, size_tag, 0, true );
+    assert( MB_SUCCESS == result );
     int true_int = 1;    
-    result = MBI()->tag_get_handle( "ORIG_CURVE", 1,
-				MB_TYPE_INTEGER, orig_curve_tag, moab::MB_TAG_DENSE|moab::MB_TAG_CREAT, &true_int );
+    result = MBI()->tag_create( "ORIG_CURVE", sizeof(int), MB_TAG_DENSE,
+				MB_TYPE_INTEGER, orig_curve_tag, &true_int, true );
     assert( MB_SUCCESS == result );
-    if(gen::error(MB_SUCCESS!=result,"Could not create orig_curve_tag tag")) return result;
-        // PROBLEM: MOAB is not consistent with file_set behavior. The tag may not be
+
+    // PROBLEM: MOAB is not consistent with file_set behavior. The tag may not be
     // on the file_set.
     MBRange file_set;
     result = MBI()->get_entities_by_type_and_tag( 0, MBENTITYSET, &faceting_tol_tag,
                                                   NULL, 1, file_set );
-
-    if(gen::error(MB_SUCCESS!=result,"could not get faceting_tol_tag")) 
-      {
-	return result;
-      }
-
+    if(gen::error(MB_SUCCESS!=result,"could not get faceting_tol_tag")) return result;
     gen::error(file_set.empty(),"file set not found");
-
-    if(gen::error(1!=file_set.size(),"Refacet with newer version of ReadCGM.")) 
-      {
-	return MB_FAILURE;
-      }
-
+    if(gen::error(1!=file_set.size(),"Refacet with newer version of ReadCGM.")) return MB_FAILURE;
     double facet_tol, sme_resabs_tol=1e-6;
     result = MBI()->tag_get_data( faceting_tol_tag, &file_set.front(), 1,  
                                   &facet_tol );
@@ -1807,106 +1739,70 @@ int main(int argc, char **argv)
     result = MBI()->tag_get_data( geometry_resabs_tag, &file_set.front(), 1,  
                                   &sme_resabs_tol );
     if(MB_SUCCESS != result) 
-      {
-	std::cout <<  "absolute tolerance could not be read from file" << std::endl;
-      }
+      std::cout <<  "absolute tolerance could not be read from file" << std::endl;
 
     // In practice, use 2*facet_tol because we are always comparing 2 faceted
     // entities. If instead we were comparing a faceted entity and a geometric
     // entitiy, then 1*facet_tol is correct.
-
     const double SME_RESABS_TOL = sme_resabs_tol; // from ACIS through CGM
     const double FACET_TOL = facet_tol; // specified by user when faceting cad
     std::cout << "  faceting tolerance=" << facet_tol << " cm" << std::endl;
     std::cout << "  absolute tolerance=" << sme_resabs_tol << " cm" << std::endl;
-    
+
     // get all geometry sets
     MBRange geom_sets[4];
-    for(unsigned dim=0; dim<4; dim++) 
-      {
-	void *val[] = {&dim};
-	result = MBI()->get_entities_by_type_and_tag( 0, MBENTITYSET, &geom_tag,
+    for(unsigned dim=0; dim<4; dim++) {
+      void *val[] = {&dim};
+      result = MBI()->get_entities_by_type_and_tag( 0, MBENTITYSET, &geom_tag,
 	  					    val, 1, geom_sets[dim] );
-	std::cout << "Get entities by type and tag" << std::endl;
-
-	assert(MB_SUCCESS == result);
-
-	// make sure that sets TRACK membership and curves are ordered
-	// MESHSET_TRACK_OWNER=0x1, MESHSET_SET=0x2, MESHSET_ORDERED=0x4
-	for(MBRange::iterator i=geom_sets[dim].begin(); i!=geom_sets[dim].end(); i++) 
-	  {
-	    unsigned int options;
-	    result = MBI()->get_meshset_options(*i, options );
-	    assert(MB_SUCCESS == result);
+      assert(MB_SUCCESS == result);
+      // make sure that sets TRACK membership and curves are ordered
+      // MESHSET_TRACK_OWNER=0x1, MESHSET_SET=0x2, MESHSET_ORDERED=0x4
+      for(MBRange::iterator i=geom_sets[dim].begin(); i!=geom_sets[dim].end(); i++) {
+        unsigned int options;
+        result = MBI()->get_meshset_options(*i, options );
+        assert(MB_SUCCESS == result);
     
-	    // if options are wrong change them
-	    if(dim==1) 
-	      {
-		if( !(MESHSET_TRACK_OWNER&options) || !(MESHSET_ORDERED&options) ) 
-		  {
-		    result = MBI()->set_meshset_options(*i, MESHSET_TRACK_OWNER|MESHSET_ORDERED);
-		    assert(MB_SUCCESS == result);
-		  }
-	      } 
-	    else 
-	      {
-		if( !(MESHSET_TRACK_OWNER&options) ) 
-		  {        
-		    result = MBI()->set_meshset_options(*i, MESHSET_TRACK_OWNER);
-		    assert(MB_SUCCESS == result);
-		  }
-	      }
-	  }
+        // if options are wrong change them
+        if(dim==1) {
+          if( !(MESHSET_TRACK_OWNER&options) || !(MESHSET_ORDERED&options) ) {
+	    result = MBI()->set_meshset_options(*i, MESHSET_TRACK_OWNER|MESHSET_ORDERED);
+            assert(MB_SUCCESS == result);
+          }
+        } else {
+          if( !(MESHSET_TRACK_OWNER&options) ) {        
+	    result = MBI()->set_meshset_options(*i, MESHSET_TRACK_OWNER);
+            assert(MB_SUCCESS == result);
+          }
+	}
       }
+    }
 
-    std::cout << "I am here" << std::endl;
-
-    // this could be related to when there are sat files rather than mesh?
     // If desired, find each entity's size before sealing.
-    
-    if(check_geom_size) 
-      {
-	std::cout << "I am checking the geometry size" << std::endl;
-	result = get_geom_size_before_sealing(geom_sets, geom_tag, size_tag );
-	if(gen::error(MB_SUCCESS!=result,"measuring geom size failed"))
-	  {
-	    return result;
-	  }
-      }
-    
-    
+    if(check_geom_size) {
+      result = get_geom_size_before_sealing( geom_sets, geom_tag, size_tag );
+      if(gen::error(MB_SUCCESS!=result,"measuring geom size failed")) return result;
+    }
 
-    std::cout << "Get entity count before sealing" << std::endl;
     // Get entity count before sealing.
     int orig_n_tris;
     result = MBI()->get_number_entities_by_type( 0, MBTRI, orig_n_tris );
-    std::cout << result << std::endl;
-
     assert(MB_SUCCESS == result);
-
     std::cout << "  input faceted geometry contains " << geom_sets[3].size() << " volumes, " 
               << geom_sets[2].size() << " surfaces, " << geom_sets[1].size() 
               << " curves, and " << orig_n_tris << " triangles" << std::endl;  
 
-    std::cout << "Finding degenerate triangles " << std::endl;
-    result = find_degenerate_tris();
+    //result = find_degenerate_tris();
 
     result = prepare_curves(geom_sets[1], geom_tag, id_tag, merge_tag, 
                            FACET_TOL, debug);
     assert(MB_SUCCESS == result);
 
     std::cout << "Zipping loops and removing small surfaces whose curves were all merged as pairs..." << std::endl;
-    std::cout << "SME_RESABS_TOL = " << SME_RESABS_TOL << " FACET_TOL = " << FACET_TOL << std::endl;
     result = prepare_surfaces(geom_sets[2], geom_tag, id_tag, normal_tag, merge_tag,
-                              orig_curve_tag,SME_RESABS_TOL, FACET_TOL, debug);
-
-    assert( MB_SUCCESS == result );
-    if ( result != MB_SUCCESS ) 
-      {
-	std::cout << "I have failed to zip" << std::endl;
-      }
-
-    std::cout << "i have zipped" << std::endl;
+                              orig_curve_tag, 
+                              SME_RESABS_TOL, FACET_TOL, debug);
+    assert(MB_SUCCESS == result);
 
     // After zipping surfaces, merged curve entity_to_deletes are no longer needed.
     // Swap surface parent-childs for curves to delete with curve to keep. 
@@ -1916,7 +1812,6 @@ int main(int argc, char **argv)
     result = MBI()->get_entities_by_type_and_tag(0, MBENTITYSET, &merge_tag, NULL,
                                                  1, curves_to_delete);
     assert(MB_SUCCESS == result);
-    // loop over the curves to delete 
     for(MBRange::const_iterator i=curves_to_delete.begin(); i!=curves_to_delete.end(); ++i) {
       // get the curve_to_keep
       MBEntityHandle curve_to_keep;
@@ -1936,10 +1831,6 @@ int main(int argc, char **argv)
     }
     result = MBI()->delete_entities( curves_to_delete );
     assert(MB_SUCCESS == result);
-    if ( result != MB_SUCCESS ) 
-      {
-	std::cout << "Houston, we have a problem" << std::endl;
-      }
     geom_sets[1] = subtract(geom_sets[1], curves_to_delete );
     if(debug) std::cout << "deleted " << curves_to_delete.size() << " curves." << std::endl;
 
@@ -1952,14 +1843,12 @@ int main(int argc, char **argv)
     result = fix_normals(geom_sets[2], id_tag, normal_tag, debug);
     assert(MB_SUCCESS == result);
 
-    /*
     // As sanity check, did zipping drastically change the entity's size?
     if(check_geom_size) {
       std::cout << "Checking size change of zipped entities..." << std::endl;
       result = get_geom_size_after_sealing( geom_sets, geom_tag, size_tag, FACET_TOL );
       if(gen::error(MB_SUCCESS!=result,"measuring geom size failed")) return result;
     }
-    */
 
     // This tool stores curves as a set of ordered edges. MOAB stores curves as
     // ordered vertices and edges. MOAB represents curve endpoints as geometry

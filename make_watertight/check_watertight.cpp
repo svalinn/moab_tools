@@ -64,12 +64,9 @@ int compare_by_handle(const void *a, const void *b)
 {
   struct coords_and_id *ia = (struct coords_and_id *)a;
   struct coords_and_id *ib = (struct coords_and_id *)b;
-  if(ia->vert1 == ib->vert1) 
-  {
+  if(ia->vert1 == ib->vert1) {
     return (int)(ia->vert2 - ib->vert2);
-  } 
-  else 
-  {
+  } else {
     return (int)(ia->vert1 - ib->vert1);
   }
   /* float comparison: returns negative if b > a 
@@ -113,8 +110,7 @@ int compare_by_coords(const void *a, const void *b)
      to preserve decimal fraction */
 } 
  
-int main(int argc, char **argv) 
-{
+int main(int argc, char **argv) {
 
   // ******************************************************************
   // Load the h5m file and create tags.
@@ -124,96 +120,66 @@ int main(int argc, char **argv)
   start_time = clock();
 
   // check input args
-  if( argc < 2 || argc > 5) 
-    {
+  if(2>argc || 5<argc) {
     std::cout << "To check using topology of facet points:              " << std::endl;
     std::cout << "./check_watertight <filename> <verbose(true or false)>" << std::endl;
     std::cout << "To check using geometry tolerance of facet points:    " << std::endl;
     std::cout << "./check_watertight <filename> <verbose(true or false)> <tolerance>" << std::endl;
     return 1;
-    }
+  }
 
   // load file and get tolerance from input argument
   MBErrorCode result;
-  std::string filename = argv[1]; //set filename
+  std::string filename = argv[1];
   MBEntityHandle input_set;
-  result = MBI()->create_meshset( MESHSET_SET, input_set ); //create handle to meshset
-  if(MB_SUCCESS != result) 
-    {
-      return result;
-    }
-
-  result = MBI()->load_file( filename.c_str(), &input_set ); //load the file into the meshset
-  if(MB_SUCCESS != result) 
-    {
-      // failed to load the file
-      std::cout << "could not load file" << std::endl;
-      return result;
-    }
+  result = MBI()->create_meshset( MESHSET_SET, input_set );
+  if(MB_SUCCESS != result) return result;
+  result = MBI()->load_file( filename.c_str(), &input_set );
+  if(MB_SUCCESS != result) {
+    std::cout << "could not load file" << std::endl;
+    return result;
+  }
 
   double tol; // tolerance for two verts to be considered the same
   bool check_topology, verbose;
+  if(2 == argc) {
+    std::cout << "topology check" << std::endl;
+    check_topology = true;
+    verbose = false;
+  } else if (3 == argc) {
+    std::cout << "topology check" << std::endl;
+    check_topology = true;
+    const std::string verbose_string = argv[2];
+    verbose = ( 0==verbose_string.compare("true") );
+  } else {
+    std::cout << "geometry check";
+    check_topology = false;
+    tol = atof( argv[3] );
+    std::cout<< " tolerance=" << tol << std::endl;
+    const std::string verbose_string = argv[2];
+    verbose = ( 0==verbose_string.compare("true") );
+  }
 
-  if(2 == argc) // set topological check
-    {
-      std::cout << "topology check" << std::endl;
-      check_topology = true;
-      verbose = false;
-    } 
-  else if (3 == argc)  // set topological check with different tolerance
-    {
-      std::cout << "topology check" << std::endl;
-      check_topology = true;
-      const std::string verbose_string = argv[2];
-      verbose = ( 0==verbose_string.compare("true") );
-    } 
-  else // otherwise do geometry check
-    {
-      std::cout << "geometry check";
-      check_topology = false;
-      tol = atof( argv[3] );
-      std::cout<< " tolerance=" << tol << std::endl;
-      const std::string verbose_string = argv[2];
-      verbose = ( 0==verbose_string.compare("true") );
-    }
-
-  // create tags on geometry
+  // create tags
   MBTag geom_tag, id_tag;
   result = MBI()->tag_create( GEOM_DIMENSION_TAG_NAME, sizeof(int), MB_TAG_DENSE,
                             MB_TYPE_INTEGER, geom_tag, 0, true );
-  if(MB_SUCCESS != result) 
-    {
-      return result;  
-    }
-
+  if(MB_SUCCESS != result) return result;  
   result = MBI()->tag_create( GLOBAL_ID_TAG_NAME, sizeof(int), MB_TAG_DENSE,
                             MB_TYPE_INTEGER, id_tag, 0, true );
-  if(MB_SUCCESS != result) 
-    {
-      return result;
-    }
+  if(MB_SUCCESS != result) return result;
   
   // get surface and volume sets
-  MBRange surf_sets, vol_sets; // MBRange of set of surfaces and volumes
-  // surface sets
+  MBRange surf_sets, vol_sets;
   int dim = 2;
   void* input_dim[] = {&dim};
   result = MBI()->get_entities_by_type_and_tag( input_set, MBENTITYSET, &geom_tag, 
                                                 input_dim, 1, surf_sets);
-  if(MB_SUCCESS != result) 
-    {
-      return result;
-    }
-
-  // volume sets
+  if(MB_SUCCESS != result) return result;
   dim = 3;
   result = MBI()->get_entities_by_type_and_tag( input_set, MBENTITYSET, &geom_tag, 
                                                 input_dim, 1, vol_sets);
-  if(MB_SUCCESS != result)
-    {
-      return result;
-    }
-
+  if(MB_SUCCESS != result) return result;
   std::cout<< "number of surfaces=" << surf_sets.size() << std::endl;
   std::cout<< "number of volumes="  << vol_sets.size() << std::endl;
 
@@ -228,110 +194,75 @@ int main(int argc, char **argv)
 
   // remove all edges for fast skinning
   MBRange edges;
-
-  result = MBI()->get_entities_by_type( 0, MBEDGE, edges ); // get all edges
-  if(MB_SUCCESS != result) // failed to get edge data
-    {
-      return result; // failed
-    }
-
-  result = MBI()->delete_entities( edges ); //otherwise delete all edge
-  
-  if(MB_SUCCESS != result) // failed to delete edge data
-    {
-      return result; // failed
-    }
+  result = MBI()->get_entities_by_type( 0, MBEDGE, edges );
+  if(MB_SUCCESS != result) return result;
+  result = MBI()->delete_entities( edges );
+  if(MB_SUCCESS != result) return result;
   
   // loop over each volume meshset
   int vol_counter = 0;
-  for(MBRange::iterator i=vol_sets.begin(); i!=vol_sets.end(); ++i) 
-    {
-      ++vol_counter;
-      int surf_counter=0;
-      MBRange child_sets;
+  for(MBRange::iterator i=vol_sets.begin(); i!=vol_sets.end(); ++i) {
+    ++vol_counter;
+    int surf_counter=0;
+    MBRange child_sets;
+    result = MBI()->get_child_meshsets( *i, child_sets );
+    if(MB_SUCCESS != result) return result;
 
-      result = MBI()->get_child_meshsets( *i, child_sets ); // get child set
-      if(MB_SUCCESS != result)  
-	{
-	  return result; // failed
-	}
+    // get the volume id of the volume meshset to print a status message
+    int vol_id=0;
+    result = MBI()->tag_get_data( id_tag, &(*i), 1, &vol_id );
+    if(MB_SUCCESS != result) return result;
+    if(verbose) std::cout << "checking volume " << vol_counter << "/" << vol_sets.size()
+              << " id=" << vol_id << std::endl;
 
-      // get the volume id of the volume meshset to print a status message
-      int vol_id=0;
-      // i is the iterator, so &(*i) is a pointer to the first element of MBRange
-      result = MBI()->tag_get_data( id_tag, &(*i), 1, &vol_id );
+    // guess how many skin edges are in each volume
+    int n_tris = 0;
+    for(MBRange::iterator j=child_sets.begin(); j!=child_sets.end(); ++j) {
+      result = MBI()->get_number_entities_by_type( *j, MBTRI, n_tris );
+      if(MB_SUCCESS != result) return result;
+    }
 
-      if(MB_SUCCESS != result)
-	{
-	  return result;
-	}
+    // save the edges in a vector that is large enough to avoid resizing
+    std::vector<coords_and_id> the_coords_and_id;
+    the_coords_and_id.reserve(n_tris);
 
-      if(verbose) 
-	{
-	  std::cout << "checking volume " << vol_counter << "/" << vol_sets.size()
-			  << " id=" << vol_id << std::endl;
-	}
+    // loop over the surface meshsets of each volume meshset
+    for(MBRange::iterator j=child_sets.begin(); j!=child_sets.end(); ++j) {
 
-      // determine how many skin edges are in each volume
-      int n_tris = 0;
+      // get the surface id of the surface meshset
+      surf_counter++;
+      int surf_id=0;
+      result = MBI()->tag_get_data( id_tag, &(*j), 1, &surf_id );
+      if(MB_SUCCESS != result) return result;
 
-      for(MBRange::iterator j=child_sets.begin(); j!=child_sets.end(); ++j) 
-	{
-	  result = MBI()->get_number_entities_by_type( *j, MBTRI, n_tris ); // for each child set get number of triangles
-	  if(MB_SUCCESS != result) 
-	    {
-	      return result;
-	    }
-	}
+      // get the range of facets of the surface meshset
+      MBRange facets;
+      result = MBI()->get_entities_by_type( *j, MBTRI, facets );
+      if(MB_SUCCESS != result) return result;
 
-      // save the edges in a vector that is large enough to avoid resizing
-      // presumably some kind of efficiency thing?? ad ??
-      std::vector<coords_and_id> the_coords_and_id;
-      the_coords_and_id.reserve(n_tris);
-
-      // loop over the surface meshsets of each volume meshset
-      for(MBRange::iterator j=child_sets.begin(); j!=child_sets.end(); ++j) 
-	{
-
-	  // get the surface id of the surface meshset
-	  surf_counter++;
-	  int surf_id=0;
-	  result = MBI()->tag_get_data( id_tag, &(*j), 1, &surf_id );
-	  if(MB_SUCCESS != result) 
-	    {
-	      return result;
-	    }
-
-	  // get the range of facets of the surface meshset
-	  MBRange facets;
-	  result = MBI()->get_entities_by_type( *j, MBTRI, facets );
-	  if(MB_SUCCESS != result) 
-	    {
-	      return result;
-	    }
-
-	  // get the range of skin edges from the range of facets
-	  // Fiasco: Jason wrote an optimized function (find_skin_vertices) that performed
-	  // almost as well as my specialized version (gen::find_skin). When he made then
-	  // generalized find_skin_vertices for MOAB it killed performance. As it stands,
-	  // gen::find_skin is ~7x faster (January 29, 2010).
-	  MBRange skin_edges;
-	  if(!facets.empty()) 
-	    {
-	      result = gen::find_skin( facets, 1, skin_edges, false );
-	      if(MB_SUCCESS != result) 
-		{
-		  return result;
-		}
-	    }
+      // get the range of skin edges from the range of facets
+      // Fiasco: Jason wrote an optimized function (find_skin_vertices) that performed
+      // almost as well as my specialized version (gen::find_skin). When he made then
+      // generalized find_skin_vertices for MOAB it killed performance. As it stands,
+      // gen::find_skin is ~7x faster (January 29, 2010).
+      MBRange skin_edges;
+      if(!facets.empty()) {
+        //result = tool.find_skin( facets, false, skin_edges );
+        //result = tool.find_skin( facets, 1, skin_edges, false );
+	//        if(check_topology) {
+          result = gen::find_skin( facets, 1, skin_edges, false );
+	  //} else {
+          //result = tool.find_skin( facets, 1, skin_edges, false );
+	  //}
+	//MBRange skin_verts;
+        //result = tool.find_skin_vertices( facets, skin_verts, &skin_edges, true );
+        if(MB_SUCCESS != result) return result;
+      }
 
       // count the number of skin edges in the range
-      if(verbose) 
-	{
-	  std::cout << "surface " << surf_counter << "/" << child_sets.size()
-		    << " id=" << surf_id << " contains " << facets.size() 
-		    << " facets and " << skin_edges.size() << " skin edges" << std::endl;
-	}
+      if(verbose) std::cout << "surface " << surf_counter << "/" << child_sets.size()
+              << " id=" << surf_id << " contains " << facets.size() 
+              << " facets and " << skin_edges.size() << " skin edges" << std::endl;
      
       for(MBRange::const_iterator k=skin_edges.begin(); k!=skin_edges.end(); ++k) {
 	// get the endpoint vertices of the facet edge
