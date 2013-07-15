@@ -1,11 +1,9 @@
 include /data/opt/dagmc/moab/lib/moab.make
-MOAB_CXXFLAGS =  -Wall -pipe -pedantic -Wno-long-long 
-MOAB_CFLAGS = -Wall -pipe -pedantic -Wno-long-long
-CXXFLAGS += ${MOAB_CXXFLAGS} -g 
+CXXFLAGS += ${MOAB_CXXFLAGS} -g -pg
 CC = g++
-LD_FLAGS = -g
-CPPFLAGS += ${MOAB_INCLUDES} -g
-CFLAGS   += ${MOAB_CFLAGS} -g
+LD_FLAGS = -pg 
+CPPFLAGS += ${MOAB_INCLUDES} -pg
+CFLAGS   += ${MOAB_CFLAGS} -pg
 # add -g -pg to both CXX and LD flags to profile
 
 all: make_watertight post_process check_watertight
