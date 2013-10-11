@@ -14,6 +14,12 @@
 #include "MBAdaptiveKDTree.hpp" // for merging verts
 #include "MBCartVect.hpp"
 
+// SENSE CONVENTIONS
+#define SENSE_FORWARD 1
+#define SENSE_REVERSE -1
+#define SENSE_UNKNOWN 0
+
+
 MBInterface *MBI(); 
 namespace gen {
   bool error( const bool error_has_occured, const std::string message="" );
@@ -180,12 +186,12 @@ MBErrorCode find_closest_vert( const MBEntityHandle reference_vert,
 			 MBRange &skin_edges,                         
                          const bool );
   //MBErrorCode find_skin( const MBRange tris, const int dim, MBRange &skin_edges, const bool );
-  MBErrorCode measure( const MBEntityHandle set, const MBTag geom_tag, double &size );
+  MBErrorCode measure( const MBEntityHandle set, const MBTag geom_tag, double &size, bool verbose = true );
 
   // Given a curve and surface set, get the relative sense.
   // From CGMA/builds/dbg/include/CubitDefines, CUBIT_UNKNOWN=-1, CUBIT_FORWARD=0, CUBIT_REVERSED=1
   MBErrorCode get_curve_surf_sense( const MBEntityHandle surf_set, const MBEntityHandle curve_set,
-                                    int &sense );
+                                    int &sense, bool debug = false );
 
   MBErrorCode surface_sense( MBEntityHandle volume, int num_surfaces,const MBEntityHandle* surfaces,int* senses_out );
   MBErrorCode surface_sense( MBEntityHandle volume, MBEntityHandle surface, int& sense_out );
