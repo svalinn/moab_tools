@@ -12,6 +12,8 @@
 #include "zip.hpp"
 #include "MBSkinner.hpp"
 
+
+
 namespace gen {
 
   bool error( const bool error_has_occured, const std::string message ) {
@@ -1089,7 +1091,7 @@ MBErrorCode find_closest_vert( const MBEntityHandle reference_vert,
     assert(MB_SUCCESS==result || MB_ALREADY_ALLOCATED==result);                       
     int id;
     result = MBI()->tag_get_data( id_tag, &set, 1, &id );                  
-    assert(MB_SUCCESS == result);                           
+    //assert(MB_SUCCESS == result);                           
     return id;
   }
   
@@ -1496,7 +1498,7 @@ MBErrorCode find_closest_vert( const MBEntityHandle reference_vert,
 // Copied from DagMC, without index_by_handle. The dagmc function will
 // segfault if build_indices is not first called. For sealing there is
 // no need to build_indices.
-MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
+MBErrorCode measure_volume( const MBEntityHandle volume, double& result, bool verbose )
 {
   MBErrorCode rval;
   std::vector<MBEntityHandle> surfaces, surf_volumes;
@@ -1515,7 +1517,7 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
     {
       return rval;
     }
-  std::cout << "in measure_volume 1" << std::endl;
+  if(verbose) std::cout << "in measure_volume 1" << std::endl;
 
     // get surface senses
   std::vector<int> senses( surfaces.size() );
@@ -1532,14 +1534,14 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
       std::cout << "or the pointer to the Moab instance is poor" << std::endl;
       exit(rval);
     }
-  std::cout << surfaces.size() << " " << result << std::endl;
+  if(verbose) std::cout << surfaces.size() << " " << result << std::endl;
   //std::cout << volume << std::endl;
   
   //rval = dagmc.build_indices( surfaces, volume);
   rval = surface_sense( volume, surfaces.size(), &surfaces[0], &senses[0] );
   
 
-  std::cout << "in measure_volume 2" << std::endl;
+  if(verbose) std::cout << "in measure_volume 2" << std::endl;
 
   if (MB_SUCCESS != rval) 
     {
@@ -1595,7 +1597,7 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
   }
   
   result /= 6.0;
-  std::cout << result << std::endl;
+  if(verbose)  std::cout << result << std::endl;
   return MB_SUCCESS;
 }
 
@@ -1625,7 +1627,7 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
     return MB_SUCCESS;                              
   }                 
 
-  MBErrorCode measure( const MBEntityHandle set, const MBTag geom_tag, double &size ) {
+  MBErrorCode measure( const MBEntityHandle set, const MBTag geom_tag, double &size, bool verbose ) {
     MBErrorCode result;
     int dim;
     result = MBI()->tag_get_data( geom_tag, &set, 1, &dim );                  
@@ -1649,9 +1651,9 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
     } else if(3 == dim) {
       //moab::DagMC &dagmc = *moab::DagMC::instance( MBI() );
       //result = dagmc.measure_volume( set, size );
-      std::cout << "in measure volume" << std::endl;
-      result = measure_volume( set, size );
-      std::cout << "in measure volume" << std::endl;
+      //std::cout << "in measure volume" << std::endl;
+      result = measure_volume( set, size, verbose );
+      //std::cout << "in measure volume" << std::endl;
       if(MB_SUCCESS != result) {
         std::cout << "result=" << result << " vol_id=" 
                   << gen::geom_id_by_handle(set) << std::endl;
@@ -1663,9 +1665,9 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
     return MB_SUCCESS;
   }
 
-  // From CGMA/builds/dbg/include/CubitDefines, CUBIT_UNKNOWN=-1, CUBIT_FORWARD=0, CUBIT_REVERSED=1
+  // From CGMA/builds/dbg/include/CubitDefines
   MBErrorCode get_curve_surf_sense( const MBEntityHandle surf_set, const MBEntityHandle curve_set,
-                                    int &sense ) {
+                                    int &sense, bool debug ) {
     std::vector<MBEntityHandle> surfs;
     std::vector<int> senses;
     MBErrorCode rval;
@@ -1674,19 +1676,37 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
     if(gen::error(MB_SUCCESS!=rval,"failed to get_senses")) return rval;
     
     unsigned counter = 0;
-    for(unsigned i=0; i<surfs.size(); ++i) {
-      if(surf_set==surfs[i]) {
+    int edim;
+    for(unsigned i=0; i<surfs.size(); i++) {
+      edim=gt.dimension(surfs[i]);
+      if( edim == -1)
+      { 
+        surfs.erase(surfs.begin()+i);
+        senses.erase(senses.begin()+i);
+        i=0;
+      }
+     if(surf_set==surfs[i]) {
         sense = senses[i];
+        
         ++counter;
       }
     }
 
+   if(debug)
+   {
+    for(unsigned int index=0; index < surfs.size() ; index++)
+    {
+     std::cout << "surf = " << geom_id_by_handle(surfs[index]) << std::endl;
+     std::cout << "sense = " << senses[index] << std::endl;
+    }
+   }
     // special case: parent surface does not exist
     if(gen::error(0==counter,"failed to find a surf in sense list")) return MB_FAILURE;
 
-    // special case: ambiguous
-    if(1<counter) sense = -1;
-    
+   
+
+     // special case: ambiguous
+    if(1<counter) sense = SENSE_UNKNOWN;
     return MB_SUCCESS;
   }
 
@@ -1715,7 +1735,7 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
 	  }
 	else if (volume == reverse)
 	  {
-	    *senses_out = -1;
+	    *senses_out = SENSE_UNKNOWN;
 	  }
 	else 
 	  {
@@ -1749,7 +1769,7 @@ MBErrorCode measure_volume( const MBEntityHandle volume, double& result )
       }
     else if (surf_volumes[1] == volume)
       {
-	sense_out = -1;
+	sense_out = SENSE_UNKNOWN;
       }
     else
       {
