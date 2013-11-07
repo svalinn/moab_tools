@@ -1,5 +1,5 @@
-include /home/patrick/moab_4.6.0/MOAB/lib/moab.make
-#include /filespace/people/s/shriwise/make_watertight_test_suite/moabs/wo_cgm/4.6.0/moab/lib/moab.make
+#include /home/patrick/moab_4.6.0/MOAB/lib/moab.make
+include /filespace/people/s/shriwise/dagmc_bld/MOAB/lib/moab.make
 
 INC = -I/home/patrick/scratch/moab_tools/make_watertight
 MOAB_CXXFLAGS =  -Wall -pipe -pedantic -Wno-long-long ${INC}
@@ -47,6 +47,9 @@ fix: mw_fix.o gen.o arc.o zip.o cleanup.o
 	$(CC) $(LD_FLAGS) -o mw_fix mw_fix.o gen.o arc.o zip.o cleanup.o  \
 	${MOAB_LIBS_LINK} -ldagmc
 
-clean:
+clean: clean_doxygen
 	rm -f make_watertight.o make_watertight gen.o arc.o zip.o \
 	cleanup.o post_process.o post_process check_watertight.o check_watertight mw_fix mw_fix.o mw_func.o cw_func.o
+
+clean_doxygen:
+	rm -rf html
