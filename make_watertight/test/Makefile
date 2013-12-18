@@ -1,6 +1,7 @@
 include ${MOAB_DIR}/lib/moab.make
 
 INC = -I../
+
 MOAB_CXXFLAGS =  -Wall -pipe -pedantic -Wno-long-long ${INC}
 MOAB_CFLAGS = -Wall -pipe -pedantic -Wno-long-long ${INC}
 CXXFLAGS += ${MOAB_CXXFLAGS} -g 
