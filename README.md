@@ -19,7 +19,7 @@ This code relies on a fully installed version of either MOAB 4.6.0 or MOAB 4.6.2
 Building Code 
 -------------
 
-1) clone the code from this github repot using the mw-moab4.6.2 tag:
+1) clone the code from this github repot using:
 
    ```git clone https://github.com/pshriwise/moab_tools```
 
