@@ -23,10 +23,11 @@ Building Code
 
    ```git clone https://github.com/pshriwise/moab_tools```
 
-
 2) go to `/moab_tools/make_watertight/` and update the Makefile so that the first line reads:
 
    ```include /path/to/MOAB/install/lib/moab.make```
+
+   or create an environment variable MOAB_MAKE with this path
 
 3) run `make` in this directory
 
@@ -46,11 +47,13 @@ evaluate the success of the sealing algorithm. It is run using:
 
 *Note: make sure that /path/to/MOAB/include/ is in your LD_LIBARARY_PATH environment  
        variable before running the program.
+
 Testing
 -------
 
 Tests exist for make_watertight in `/moab_tools/make_watertight/test/`.
-These tests can be installed by updating the Makefile as described above in this particular directory
+
+These tests can be installed by updating the Makefile in this particular directory
 and then running `make`. The tests can then be run (from within this directory) using the command:
 
 ```test_cyl cyl.h5m```
