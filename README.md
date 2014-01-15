@@ -23,17 +23,10 @@ Building Code
 
    ```git clone https://github.com/pshriwise/moab_tools```
 
-   followed by:
-
-   ```cd ./moab_tools```
-
-   ```git checkout mw-moab4.6.2```
 
 2) go to `/moab_tools/make_watertight/` and update the Makefile so that the first line reads:
 
    ```include /path/to/MOAB/install/lib/moab.make```
-
-   or create an environment variable MOAB_MAKE with this path
 
 3) run `make` in this directory
 
