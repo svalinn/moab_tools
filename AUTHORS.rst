@@ -2,4 +2,4 @@ This project has had contributions from the following people (in alphabetical or
 
 Andrew Davis
 Parick Shriwise
-
+Brandon Smith
