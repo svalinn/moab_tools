@@ -94,13 +94,15 @@ MBErrorCode restore_moab_curve_representation( const MBRange curve_sets );
 MBErrorCode get_geom_size_before_sealing( const MBRange geom_sets[], 
                                           const MBTag geom_tag,
                                           const MBTag size_tag,
-                                          bool verbose = true );
+                                          bool debug,
+                                          bool verbose);
 /// prints changes in size to the mesh after sealing
 MBErrorCode get_geom_size_after_sealing( const MBRange geom_sets[], 
                                          const MBTag geom_tag,
                                          const MBTag size_tag,
                                          const double FACET_TOL,
-                                         bool verbose = true );
+                                         bool debug,
+                                         bool verbose );
 
 /// deletes all curves with a merge_tag and removes them from the curve sets of the mesh
 MBErrorCode delete_merged_curves(MBRange &existing_curve_sets, MBTag merge_tag, bool debug = false);
@@ -113,7 +115,8 @@ MBErrorCode get_unmerged_curves( MBEntityHandle surface,
                                  std::vector<MBEntityHandle> &curves, 
                                  std::vector<MBEntityHandle> &unmerged_curves, 
                                  MBTag merge_tag, 
-                                 bool verbose);
+                                 bool verbose,
+                                 bool debug);
 
 /// takes the skin_edges from the moab skinner and creates loops of vertices between the facets and geometric curves.
 /// The vertex loops are returned in the vector array, skin. 

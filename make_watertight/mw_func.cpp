@@ -107,9 +107,11 @@ MBErrorCode prepare_curves(MBRange &curve_sets,
     during zipping anyhow. Doing this now removes small curves from zipping and
     reduces ambiguity. */
     if(FACET_TOL > gen::length(curve_edges)) {
-      std::cout << "  deleted curve " << id << ", length=" << gen::length(curve_edges) 
-                << " cm, n_verts=" << curve_edges.size()+1 << std::endl;
-
+      if (debug)
+        {
+          std::cout << "  deleted curve " << id << ", length=" << gen::length(curve_edges) 
+          << " cm, n_verts=" << curve_edges.size()+1 << std::endl;
+        }
       // get the endpoints of the curve
       MBRange endpt_sets;
       result = MBI()->get_child_meshsets( *i, endpt_sets );
@@ -643,7 +645,7 @@ MBErrorCode seal_arc_pair( const bool debug,
 	  std::cout << "  warning6: surf " << surf_id << " vertex move_dist=" 
                     << move_dist << std::endl;
 	}
-	rval = zip::t_joint( normal_tag, edge[e_pos-1], edge[e_pos], skin[s_pos] );
+	rval = zip::t_joint( normal_tag, edge[e_pos-1], edge[e_pos], skin[s_pos], debug );
         if(gen::error(MB_SUCCESS!=rval,"tjoint failed a")) return rval;
 	skin.insert( skin.begin()+s_pos, edge[e_pos] );
 	e_pos++;
@@ -661,7 +663,7 @@ MBErrorCode seal_arc_pair( const bool debug,
 	  std::cout << "  warning6: surf " << surf_id << " vertex move_dist=" 
                     << move_dist << std::endl;
 	}
-	rval = zip::t_joint( normal_tag, edge[e_pos-1], skin[s_pos], edge[e_pos] );
+	rval = zip::t_joint( normal_tag, edge[e_pos-1], skin[s_pos], edge[e_pos], debug );
         if(gen::error(MB_SUCCESS!=rval,"tjoint failed b")) return rval;
 	edge.insert( edge.begin() + e_pos, skin[s_pos] );
 	e_pos++;
@@ -783,7 +785,9 @@ MBErrorCode seal_loop( bool debug,
       }
 
       // check to ensure that the endpt sets aren't degenerate
-      if(2==endpt_sets.size() && endpts.front()==endpts.back()) {
+
+      if(2==endpt_sets.size() && endpts.front()==endpts.back() && debug ) {
+
 	std::cout << "  warning9: curve " << gen::geom_id_by_handle(curve_sets[i]) 
                   << " geometric endpoints degenerate" << std::endl;
       }
@@ -798,7 +802,7 @@ MBErrorCode seal_loop( bool debug,
           "geometric verts inconsistent with curve")) return MB_FAILURE;
       } else {
         if(curve.front()==curve.back()) 
-          std::cout << "  warning10: degenerate curve endpts" << std::endl;
+          if(debug) std::cout << "  warning10: degenerate curve endpts" << std::endl;
         if(gen::error(curve.front()!=endpts.front() && curve.front()!=endpts.back(),
 		      "endpts not consistent")) return MB_FAILURE;
         if(gen::error(curve.back()!=endpts.front() && curve.back()!=endpts.back(),
@@ -1013,14 +1017,14 @@ MBErrorCode prepare_surfaces(MBRange &surface_sets,
 
         // Get the curves and determine the number of unmerged curves
         std::vector<MBEntityHandle> curve_sets, unmerged_curve_sets;
-        result = get_unmerged_curves( *i , curve_sets, unmerged_curve_sets, merge_tag, verbose);
+        result = get_unmerged_curves( *i , curve_sets, unmerged_curve_sets, merge_tag, verbose, debug);
         if(gen::error(MB_SUCCESS!=result, " could not get the curves and unmerged curves" )) return result; 
       
 
         // If all of the curves are merged, remove the surfaces facets.
         if(unmerged_curve_sets.empty()) {
        
-          result = gen::delete_surface( *i , geom_tag, tris, surf_id); 
+          result = gen::delete_surface( *i , geom_tag, tris, surf_id, debug, verbose); 
           if( gen::error(MB_SUCCESS!=result, "could not delete surface" )) return result;                                              
           // adjust iterator so *i is still the same surface
           i = surface_sets.erase(i) - 1;
@@ -1265,6 +1269,7 @@ MBErrorCode fix_normals(MBRange surface_sets, MBTag id_tag, MBTag normal_tag, co
 MBErrorCode get_geom_size_before_sealing( const MBRange geom_sets[], 
                                           const MBTag geom_tag,
                                           const MBTag size_tag,
+                                          bool debug,
                                           bool verbose ) 
 {
   MBErrorCode rval;
@@ -1274,7 +1279,7 @@ MBErrorCode get_geom_size_before_sealing( const MBRange geom_sets[],
       {
 	double size;
 	//std::cout << "dim = " << dim << " *i =" << *i << std::endl;
-	rval = gen::measure( *i, geom_tag, size, verbose );
+	rval = gen::measure( *i, geom_tag, size, debug, verbose );
 	//std::cout << " here in gen mesaure" << std::endl;
 	if(gen::error(MB_SUCCESS!=rval,"could not measure")) 
 	  {
@@ -1301,8 +1306,9 @@ MBErrorCode get_geom_size_after_sealing( const MBRange geom_sets[],
                                          const MBTag geom_tag,
                                          const MBTag size_tag,
                                          const double FACET_TOL,
+                                         bool debug,
                                          bool verbose ) {
-  const bool debug = false;
+  
       // save the largest difference for each dimension
       struct size_data {
         double orig_size, new_size, diff, percent;
@@ -1324,7 +1330,7 @@ MBErrorCode get_geom_size_after_sealing( const MBRange geom_sets[],
 	    std::cout << "rval=" << rval << " id=" << gen::geom_id_by_handle(*i) << std::endl;
 	  }
 	  assert(MB_SUCCESS == rval);
-	  rval = gen::measure( *i, geom_tag, new_size, verbose );
+	  rval = gen::measure( *i, geom_tag, new_size, debug, verbose );
 	  assert(MB_SUCCESS == rval);
 
           // Remember the largest difference and associated percent difference
@@ -1486,7 +1492,11 @@ MBErrorCode delete_sealing_tags( MBTag normal_tag, MBTag merge_tag, MBTag size_t
   return result; 
 }
 
-MBErrorCode get_unmerged_curves( MBEntityHandle surface, std::vector<MBEntityHandle> &curves, std::vector<MBEntityHandle> &unmerged_curves, MBTag merge_tag, bool verbose) {
+MBErrorCode get_unmerged_curves( MBEntityHandle surface, std::vector<MBEntityHandle> &curves, 
+                                 std::vector<MBEntityHandle> &unmerged_curves, 
+                                 MBTag merge_tag, 
+                                 bool verbose, 
+                                 bool debug) {
 
   MBErrorCode result; 
 
@@ -1505,7 +1515,7 @@ MBErrorCode get_unmerged_curves( MBEntityHandle surface, std::vector<MBEntityHan
         if(MB_TAG_NOT_FOUND == result) {
           curve = *j;
         } else if(MB_SUCCESS == result) {
-	  if(verbose) {
+	  if(debug) {
             std::cout << "  curve_id=" << gen::geom_id_by_handle(*j) 
                       << " is entity_to_delete" << std::endl;
           }
@@ -1749,13 +1759,13 @@ MBErrorCode make_mesh_watertight(MBEntityHandle input_set, double &facet_tol, bo
     // If desired, find each entity's size before sealing.
     if(check_geom_size) 
       {
-	result = get_geom_size_before_sealing( geom_sets, geom_tag, size_tag, verbose );
+	result = get_geom_size_before_sealing( geom_sets, geom_tag, size_tag, debug, verbose );
 	if(gen::error(MB_SUCCESS!=result,"measuring geom size failed")) return result;
       }
     
 
     
-    if (verbose) std::cout << "Get entity count before sealing" << std::endl;
+    if (verbose) std::cout << "Getting entity count before sealing..." << std::endl;
     // Get entity count before sealing.
     int orig_n_tris;
     result = MBI()->get_number_entities_by_type( 0, MBTRI, orig_n_tris );
@@ -1768,7 +1778,7 @@ MBErrorCode make_mesh_watertight(MBEntityHandle input_set, double &facet_tol, bo
               << " curves, and " << orig_n_tris << " triangles" << std::endl;  
     }
     
-    if(verbose) std::cout << "Finding degenerate triangles " << std::endl;
+    if(verbose) std::cout << "Finding degenerate triangles... " << std::endl;
     result = find_degenerate_tris();
     if(gen::error(result!=MB_SUCCESS,"could not determine if triangles were degenerate or not")) return result;
       
@@ -1811,7 +1821,7 @@ MBErrorCode make_mesh_watertight(MBEntityHandle input_set, double &facet_tol, bo
     // As sanity check, did zipping drastically change the entity's size?
     if(check_geom_size && verbose) {
       std::cout << "Checking size change of zipped entities..." << std::endl;
-      result = get_geom_size_after_sealing( geom_sets, geom_tag, size_tag, FACET_TOL );
+      result = get_geom_size_after_sealing( geom_sets, geom_tag, size_tag, FACET_TOL, debug, verbose );
       if(gen::error(MB_SUCCESS!=result,"measuring geom size failed")) return result;
     }
    
