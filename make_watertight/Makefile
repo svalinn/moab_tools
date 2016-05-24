@@ -9,7 +9,7 @@ CPPFLAGS += ${MOAB_INCLUDES} -g
 CFLAGS   += ${MOAB_CFLAGS} -g
 # add -g -pg to both CXX and LD flags to profile
 
-all: make_watertight post_process check_watertight fix doxy
+all: make_watertight post_process check_watertight fix 
 
 gen.o: gen.cpp gen.hpp
 	$(CC) $(CXXFLAGS) ${MOAB_INCLUDES} -c gen.cpp
